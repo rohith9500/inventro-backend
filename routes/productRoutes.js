@@ -4,55 +4,71 @@ const Product = require('../models/Product');
 
 // Get all products
 router.get('/', async (req, res) => {
-  try {
-    const products = await Product.find();
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+    try {
+        const products = await Product.find();
+        res.json(products);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// Create a new product
+// Add product
 router.post('/', async (req, res) => {
-  const { name, category, price, quantity } = req.body;
-  try {
-    const newProduct = new Product({ name, category, price, quantity });
-    const savedProduct = await newProduct.save();
-    res.status(201).json(savedProduct);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-// Delete a product by ID
-router.delete('/:id', async (req, res) => {
-  console.log("Delete request received for ID:", req.params.id); // Request varudha nu paarka
-  try {
-    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
-    if (!deletedProduct) {
-      return res.status(404).json({ message: 'Product not found' });
+    try {
+        const newProduct = new Product(req.body);
+        const savedProduct = await newProduct.save();
+        res.status(201).json(savedProduct);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
     }
-    res.json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
 });
 
-// Update a product by ID
+// Update product
 router.put('/:id', async (req, res) => {
-  try {
-    const updatedProduct = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    if (!updatedProduct) {
-      return res.status(404).json({ message: 'Product not found' });
+    try {
+        const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(updatedProduct);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
     }
-    res.json(updatedProduct);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
+});
+
+// Delete product
+router.delete('/:id', async (req, res) => {
+    try {
+        await Product.findByIdAndDelete(req.params.id);
+        res.json({ message: "Product deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Stock Reduce & History Route
+router.post('/:id/reduce', async (req, res) => {
+    try {
+        const { reduceQty, buyerName } = req.body;
+        const product = await Product.findById(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        if (product.quantity < Number(reduceQty)) {
+            return res.status(400).json({ message: "Not enough stock available" });
+        }
+
+        product.quantity -= Number(reduceQty);
+
+        product.history.push({
+            quantityReduced: Number(reduceQty),
+            buyerName: buyerName
+        });
+
+        await product.save();
+        res.json({ message: "Stock reduced successfully", product });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 module.exports = router;
