@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 // Multiple Admin Emails allowed list 
 const ALLOWED_ADMIN_EMAILS = [
     "rohitharuchamy11@gmail.com",
-    "rohitha.24csc@kongu.edu"
+    "rohitha.24cse@kongu.edu"
 ]; 
 
 // Register Route
