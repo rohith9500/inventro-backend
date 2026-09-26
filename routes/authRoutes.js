@@ -4,22 +4,23 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// Hardcoded Admin Email
-const ALLOWED_ADMIN_EMAIL = "rohitharuchamy11@gmail.com"; 
-const ALLOWED_ADMIN_EMAIL = "rohitha.24cse@kongu.edu"; 
+// Multiple Admin Emails allowed list 
+const ALLOWED_ADMIN_EMAILS = [
+    "rohitharuchamy11@gmail.com",
+    "rohitha.24csc@kongu.edu"
+]; 
 
-
-// Register Route (Strictly restricted to admin email only)
+// Register Route
 router.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
         
-        // Check if email matches allowed admin email
-        if (email.trim().toLowerCase() !== ALLOWED_ADMIN_EMAIL.toLowerCase()) {
+        const cleanEmail = email.trim().toLowerCase();
+        if (!ALLOWED_ADMIN_EMAILS.includes(cleanEmail)) {
             return res.status(403).json({ message: "Registration is restricted! Unauthorized email ID." });
         }
 
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ email: cleanEmail });
         if (existingUser) {
             return res.status(400).json({ message: "User already exists with this email" });
         }
@@ -27,7 +28,7 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const newUser = new User({ username, email, password: hashedPassword });
+        const newUser = new User({ username, email: cleanEmail, password: hashedPassword });
         await newUser.save();
         res.status(201).json({ message: "User registered successfully!" });
     } catch (err) {
@@ -35,16 +36,17 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login Route (Strictly restricted)
+// Login Route
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        if (email.trim().toLowerCase() !== ALLOWED_ADMIN_EMAIL.toLowerCase()) {
+        const cleanEmail = email.trim().toLowerCase();
+        if (!ALLOWED_ADMIN_EMAILS.includes(cleanEmail)) {
             return res.status(403).json({ message: "Access Denied: Unauthorized Email ID!" });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: cleanEmail });
         if (!user) {
             return res.status(400).json({ message: "Invalid email or password" });
         }
@@ -65,8 +67,9 @@ router.post('/login', async (req, res) => {
 router.post('/change-password', async (req, res) => {
     try {
         const { email, currentPassword, newPassword } = req.body;
+        const cleanEmail = email.trim().toLowerCase();
         
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: cleanEmail });
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
