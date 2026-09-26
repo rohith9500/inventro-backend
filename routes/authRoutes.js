@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken');
 
 // Hardcoded Admin Email
 const ALLOWED_ADMIN_EMAIL = "rohitharuchamy11@gmail.com"; 
+const ALLOWED_ADMIN_EMAIL = "rohitha.24cse@kongu.edu"; 
+
 
 // Register Route (Strictly restricted to admin email only)
 router.post('/register', async (req, res) => {
