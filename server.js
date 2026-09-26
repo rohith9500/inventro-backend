@@ -10,6 +10,9 @@ app.use(express.json());
 const productRoutes = require('./routes/productRoutes');
 app.use('/api/products', productRoutes);
 
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);
+
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB Connected Successfully! ✅'))
   .catch((err) => console.log('MongoDB Connection Failed: ❌', err));
