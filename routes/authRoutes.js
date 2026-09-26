@@ -4,27 +4,28 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// Register Route
+// Hardcoded Admin Email
+const ALLOWED_ADMIN_EMAIL = "rohitharuchamy11@gmail.com"; 
+
+// Register Route (Strictly restricted to admin email only)
 router.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
         
-        // Check if user already exists
+        // Check if email matches allowed admin email
+        if (email.trim().toLowerCase() !== ALLOWED_ADMIN_EMAIL.toLowerCase()) {
+            return res.status(403).json({ message: "Registration is restricted! Unauthorized email ID." });
+        }
+
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: "User already exists with this email" });
         }
 
-        // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const newUser = new User({
-            username,
-            email,
-            password: hashedPassword
-        });
-
+        const newUser = new User({ username, email, password: hashedPassword });
         await newUser.save();
         res.status(201).json({ message: "User registered successfully!" });
     } catch (err) {
@@ -32,10 +33,14 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login Route
+// Login Route (Strictly restricted)
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+
+        if (email.trim().toLowerCase() !== ALLOWED_ADMIN_EMAIL.toLowerCase()) {
+            return res.status(403).json({ message: "Access Denied: Unauthorized Email ID!" });
+        }
 
         const user = await User.findOne({ email });
         if (!user) {
@@ -47,10 +52,33 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: "Invalid email or password" });
         }
 
-        // Create token (Make sure JWT_SECRET is in your Render environment variables)
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '1d' });
-
         res.json({ token, username: user.username, message: "Login successful!" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Change Password Route
+router.post('/change-password', async (req, res) => {
+    try {
+        const { email, currentPassword, newPassword } = req.body;
+        
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Incorrect current password" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        res.json({ message: "Password changed successfully!" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

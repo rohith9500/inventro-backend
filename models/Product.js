@@ -10,6 +10,7 @@ const productSchema = new mongoose.Schema({
     name: { type: String, required: true },
     price: { type: Number, required: true },
     quantity: { type: Number, required: true, default: 0 },
+    userEmail: { type: String, required: true }, // Which user added this product
     history: [historySchema]
 }, { timestamps: true });
 
