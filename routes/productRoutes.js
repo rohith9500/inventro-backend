@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 
-// Get products strictly filtered by userEmail query parameter
+// Get products filtered by userEmail
 router.get('/', async (req, res) => {
     try {
         const { email } = req.query;
@@ -73,7 +73,30 @@ router.post('/:id/reduce', async (req, res) => {
         product.quantity -= Number(reduceQty);
         product.history.push({
             quantityReduced: Number(reduceQty),
-            buyerName
+            buyerName: `Sold to ${buyerName}`
+        });
+
+        await product.save();
+        res.json(product);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Add Stock & History (New Feature)
+router.post('/:id/add-stock', async (req, res) => {
+    try {
+        const { addQty, supplierName } = req.body;
+        const product = await Product.findById(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        product.quantity += Number(addQty);
+        product.history.push({
+            quantityReduced: -Number(addQty), // Negative to indicate addition in logs or separate tracking
+            buyerName: `Added from ${supplierName}`
         });
 
         await product.save();
