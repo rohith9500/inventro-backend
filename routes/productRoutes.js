@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Add or Update Product based on Name + Category for dynamic pricing
+// Add or Update Product based on Name + Category pair
 router.post('/', async (req, res) => {
     try {
         const { name, category, price, quantity, userEmail } = req.body;
@@ -26,9 +26,9 @@ router.post('/', async (req, res) => {
 
         const cleanEmail = userEmail.trim().toLowerCase();
         const cleanName = name.trim();
-        const cleanCategory = category ? category.trim() : '';
+        const cleanCategory = category ? category.trim() : ''; // Optional category (blank if not selected)
 
-        // Check if the exact product name and category already exists for this user
+        // Check if exact product name and exact category already exists
         let existingProduct = await Product.findOne({
             userEmail: cleanEmail,
             name: { $regex: new RegExp(`^${cleanName}$`, 'i') },
@@ -36,14 +36,14 @@ router.post('/', async (req, res) => {
         });
 
         if (existingProduct) {
-            // Update price to the latest one and update/add stock quantity as needed
+            // Update price and add quantity to existing row
             existingProduct.price = Number(price);
-            existingProduct.quantity = Number(quantity); // Or existingProduct.quantity + Number(quantity) if you want to add stock
+            existingProduct.quantity = Number(quantity); // Or existingProduct.quantity + Number(quantity)
             await existingProduct.save();
             return res.status(200).json(existingProduct);
         }
 
-        // If not exists, create a new product entry
+        // Create new product if name + category combination doesn't exist
         const newProduct = new Product({
             name: cleanName,
             category: cleanCategory,
