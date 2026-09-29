@@ -19,14 +19,15 @@ router.get('/', async (req, res) => {
 // Add Product linked to userEmail
 router.post('/', async (req, res) => {
     try {
-        const { name, price, quantity, userEmail } = req.body;
+        const { name, category, price, quantity, userEmail } = req.body;
         if (!userEmail) {
             return res.status(400).json({ message: "User email is required to add product" });
         }
         const newProduct = new Product({
             name,
-            price,
-            quantity,
+            category: category || '',
+            price: Number(price),
+            quantity: Number(quantity),
             userEmail: userEmail.trim().toLowerCase()
         });
         await newProduct.save();
@@ -36,10 +37,20 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Update Product
+// Update Product with category and price sync
 router.put('/:id', async (req, res) => {
     try {
-        const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const { name, category, price, quantity } = req.body;
+        const updatedProduct = await Product.findByIdAndUpdate(
+            req.params.id, 
+            { 
+                name, 
+                category: category || '', 
+                price: Number(price), 
+                quantity: Number(quantity) 
+            }, 
+            { new: true }
+        );
         res.json(updatedProduct);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -106,7 +117,7 @@ router.post('/:id/add-stock', async (req, res) => {
     }
 });
 
-// Delete specific history log and reverse the stock change (Revert feature)
+// Delete specific history log and revert the stock change (Revert feature)
 router.delete('/:productId/history/:historyId', async (req, res) => {
     try {
         const { productId, historyId } = req.params;
