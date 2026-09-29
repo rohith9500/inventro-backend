@@ -83,7 +83,7 @@ router.post('/:id/reduce', async (req, res) => {
     }
 });
 
-// Add Stock & History (New Feature)
+// Add Stock & History
 router.post('/:id/add-stock', async (req, res) => {
     try {
         const { addQty, supplierName } = req.body;
@@ -95,9 +95,35 @@ router.post('/:id/add-stock', async (req, res) => {
 
         product.quantity += Number(addQty);
         product.history.push({
-            quantityReduced: -Number(addQty), // Negative to indicate addition in logs or separate tracking
+            quantityReduced: -Number(addQty), // Negative denotes addition
             buyerName: `Added from ${supplierName}`
         });
+
+        await product.save();
+        res.json(product);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete specific history log and reverse the stock change (Revert feature)
+router.delete('/:productId/history/:historyId', async (req, res) => {
+    try {
+        const { productId, historyId } = req.params;
+        const product = await Product.findById(productId);
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        const historyItem = product.history.id(historyId);
+        if (!historyItem) {
+            return res.status(404).json({ message: "History log not found" });
+        }
+
+        // Revert quantity change
+        product.quantity += Number(historyItem.quantityReduced);
+        product.history.pull(historyId);
 
         await product.save();
         res.json(product);
