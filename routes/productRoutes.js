@@ -16,19 +16,40 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Add Product linked to userEmail
+// Add or Update Product based on Name + Category for dynamic pricing
 router.post('/', async (req, res) => {
     try {
         const { name, category, price, quantity, userEmail } = req.body;
         if (!userEmail) {
             return res.status(400).json({ message: "User email is required to add product" });
         }
+
+        const cleanEmail = userEmail.trim().toLowerCase();
+        const cleanName = name.trim();
+        const cleanCategory = category ? category.trim() : '';
+
+        // Check if the exact product name and category already exists for this user
+        let existingProduct = await Product.findOne({
+            userEmail: cleanEmail,
+            name: { $regex: new RegExp(`^${cleanName}$`, 'i') },
+            category: cleanCategory
+        });
+
+        if (existingProduct) {
+            // Update price to the latest one and update/add stock quantity as needed
+            existingProduct.price = Number(price);
+            existingProduct.quantity = Number(quantity); // Or existingProduct.quantity + Number(quantity) if you want to add stock
+            await existingProduct.save();
+            return res.status(200).json(existingProduct);
+        }
+
+        // If not exists, create a new product entry
         const newProduct = new Product({
-            name,
-            category: category || '',
+            name: cleanName,
+            category: cleanCategory,
             price: Number(price),
             quantity: Number(quantity),
-            userEmail: userEmail.trim().toLowerCase()
+            userEmail: cleanEmail
         });
         await newProduct.save();
         res.status(201).json(newProduct);
@@ -37,15 +58,15 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Update Product with category and price sync
+// Update Product explicitly via Edit button
 router.put('/:id', async (req, res) => {
     try {
         const { name, category, price, quantity } = req.body;
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id, 
             { 
-                name, 
-                category: category || '', 
+                name: name.trim(), 
+                category: category ? category.trim() : '', 
                 price: Number(price), 
                 quantity: Number(quantity) 
             }, 
@@ -106,7 +127,7 @@ router.post('/:id/add-stock', async (req, res) => {
 
         product.quantity += Number(addQty);
         product.history.push({
-            quantityReduced: -Number(addQty), // Negative denotes addition
+            quantityReduced: -Number(addQty),
             buyerName: `Added from ${supplierName}`
         });
 
@@ -117,7 +138,7 @@ router.post('/:id/add-stock', async (req, res) => {
     }
 });
 
-// Delete specific history log and revert the stock change (Revert feature)
+// Delete specific history log and revert stock
 router.delete('/:productId/history/:historyId', async (req, res) => {
     try {
         const { productId, historyId } = req.params;
@@ -132,7 +153,6 @@ router.delete('/:productId/history/:historyId', async (req, res) => {
             return res.status(404).json({ message: "History log not found" });
         }
 
-        // Revert quantity change
         product.quantity += Number(historyItem.quantityReduced);
         product.history.pull(historyId);
 
