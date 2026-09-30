@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Add or Update Product based on Name + Category pair
+// Add or Update Product based on exact Name + exact Category
 router.post('/', async (req, res) => {
     try {
         const { name, category, price, quantity, userEmail } = req.body;
@@ -26,9 +26,10 @@ router.post('/', async (req, res) => {
 
         const cleanEmail = userEmail.trim().toLowerCase();
         const cleanName = name ? name.trim() : '';
+        // If category is explicitly passed and valid, use it; otherwise default to empty string (General)
         const cleanCategory = category ? category.trim() : '';
 
-        // Check if exact product name and exact category already exists for this user
+        // Find existing product matching exact name, exact category, and userEmail
         let existingProduct = await Product.findOne({
             userEmail: cleanEmail,
             name: { $regex: new RegExp(`^${cleanName}$`, 'i') },
@@ -36,14 +37,14 @@ router.post('/', async (req, res) => {
         });
 
         if (existingProduct) {
-            // Update price and update/add quantity to existing row
+            // Update price and quantity for the exact category match
             existingProduct.price = Number(price);
             existingProduct.quantity = Number(quantity);
             await existingProduct.save();
             return res.status(200).json(existingProduct);
         }
 
-        // Create new product if combination doesn't exist
+        // Create new product if no match found for this category
         const newProduct = new Product({
             name: cleanName,
             category: cleanCategory,
